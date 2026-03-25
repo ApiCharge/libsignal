@@ -3,12 +3,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //
 
+use std::cell::RefCell;
 use std::fmt;
 
 use libsignal_core::derive_arrays;
 
 use crate::proto::storage::session_structure;
 use crate::{PrivateKey, PublicKey, Result, crypto};
+
+thread_local! {
+    pub static LAST_MESSAGE_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+}
 
 pub(crate) enum MessageKeyGenerator {
     Keys(MessageKeys),
@@ -92,6 +97,9 @@ impl MessageKeys {
         optional_salt: Option<&[u8]>,
         counter: u32,
     ) -> Self {
+        LAST_MESSAGE_KEY.with(|cell| {
+            *cell.borrow_mut() = Some(input_key_material.to_vec());
+        });
         let (cipher_key, mac_key, iv) = derive_arrays(|okm| {
             hkdf::Hkdf::<sha2::Sha256>::new(optional_salt, input_key_material)
                 .expand(b"WhisperMessageKeys", okm)
