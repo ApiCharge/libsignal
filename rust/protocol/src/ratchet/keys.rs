@@ -13,6 +13,7 @@ use crate::{PrivateKey, PublicKey, Result, crypto};
 
 thread_local! {
     pub static LAST_MESSAGE_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    pub static LAST_PQR_SALT: RefCell<Option<Vec<u8>>> = RefCell::new(None);
 }
 
 pub(crate) enum MessageKeyGenerator {
@@ -25,6 +26,10 @@ impl MessageKeyGenerator {
         Self::Seed((seed.to_vec(), counter))
     }
     pub(crate) fn generate_keys(self, pqr_key: spqr::MessageKey) -> MessageKeys {
+        // Capture PQR salt for sealed sender relay
+        LAST_PQR_SALT.with(|cell| {
+            *cell.borrow_mut() = pqr_key.as_deref().map(|k| k.to_vec());
+        });
         match self {
             Self::Seed((seed, counter)) => {
                 MessageKeys::derive_keys(&seed, pqr_key.as_deref(), counter)

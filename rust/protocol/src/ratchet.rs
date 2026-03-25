@@ -10,7 +10,7 @@ use libsignal_core::derive_arrays;
 use rand::{CryptoRng, Rng};
 
 pub(crate) use self::keys::{ChainKey, MessageKeyGenerator, RootKey};
-pub use self::keys::LAST_MESSAGE_KEY;
+pub use self::keys::{LAST_MESSAGE_KEY, LAST_PQR_SALT};
 pub use self::params::{AliceSignalProtocolParameters, BobSignalProtocolParameters};
 use crate::protocol::CIPHERTEXT_MESSAGE_CURRENT_VERSION;
 use crate::state::SessionState;

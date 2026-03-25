@@ -61,7 +61,7 @@ pub use protocol::{
     SignalMessage, extract_decryption_error_message_from_serialized_content,
 };
 pub use ratchet::{
-    AliceSignalProtocolParameters, BobSignalProtocolParameters, LAST_MESSAGE_KEY,
+    AliceSignalProtocolParameters, BobSignalProtocolParameters, LAST_MESSAGE_KEY, LAST_PQR_SALT,
     initialize_alice_session_record, initialize_bob_session_record,
 };
 pub use sealed_sender::{
