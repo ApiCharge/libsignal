@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 //
 
+use std::cell::RefCell;
+
 use rand::{CryptoRng, Rng};
 use uuid::Uuid;
 
@@ -12,6 +14,13 @@ use crate::{
     CiphertextMessageType, KeyPair, ProtocolAddress, Result, SenderKeyDistributionMessage,
     SenderKeyMessage, SenderKeyRecord, SenderKeyStore, SignalProtocolError, consts,
 };
+
+/// Thread-local that captures the signing key from the most recently processed
+/// SenderKeyDistributionMessage. Consumed (taken) by the caller after open_envelope.
+/// 32 bytes: Curve25519 public key (no 0x05 prefix).
+thread_local! {
+    pub static LAST_SKDM_SIGNING_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+}
 
 pub async fn group_encrypt<R: Rng + CryptoRng>(
     sender_key_store: &mut dyn SenderKeyStore,
@@ -211,17 +220,33 @@ pub async fn process_sender_key_distribution_message(
         .await?
         .unwrap_or_else(SenderKeyRecord::new_empty);
 
+    let signing_key = *skdm.signing_key()?;
+
     sender_key_record.add_sender_key_state(
         skdm.message_version(),
         skdm.chain_id()?,
         skdm.iteration()?,
         skdm.chain_key()?,
-        *skdm.signing_key()?,
+        signing_key,
         None,
     );
     sender_key_store
         .store_sender_key(sender, distribution_id, &sender_key_record)
         .await?;
+
+    // Capture the signing key for the relay to register on-chain.
+    // The key is 33 bytes serialized (0x05 prefix + 32 bytes Curve25519).
+    // Strip the prefix for the 32-byte Montgomery u-coordinate.
+    let key_bytes = signing_key.serialize();
+    let key_no_prefix = if key_bytes.len() == 33 && key_bytes[0] == 0x05 {
+        key_bytes[1..].to_vec()
+    } else {
+        key_bytes.to_vec()
+    };
+    LAST_SKDM_SIGNING_KEY.with(|cell| {
+        *cell.borrow_mut() = Some(key_no_prefix);
+    });
+
     Ok(())
 }
 

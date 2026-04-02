@@ -47,7 +47,7 @@ pub use fingerprint::{
     DisplayableFingerprint, Error as FingerprintError, Fingerprint, ScannableFingerprint,
 };
 pub use group_cipher::{
-    create_sender_key_distribution_message, group_decrypt, group_encrypt,
+    LAST_SKDM_SIGNING_KEY, create_sender_key_distribution_message, group_decrypt, group_encrypt,
     process_sender_key_distribution_message,
 };
 pub use identity_key::{IdentityKey, IdentityKeyPair};
