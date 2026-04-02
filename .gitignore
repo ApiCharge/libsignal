@@ -36,3 +36,5 @@ Brewfile.lock.json
 
 __pycache__
 /.vs/libsignal/CopilotIndices/17.14.1561.44479
+/.claude
+/.vs
