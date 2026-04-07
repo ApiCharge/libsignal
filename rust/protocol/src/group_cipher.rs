@@ -22,6 +22,17 @@ thread_local! {
     pub static LAST_SKDM_SIGNING_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
 }
 
+/// Thread-locals that capture the raw SenderKeyMessage bytes and the
+/// SenderMessageKey seed from the most recent group_decrypt() call.
+/// Used by the relay to forward cryptographic proof to the smart contract
+/// for on-chain signature verification and decryption.
+thread_local! {
+    /// Raw SenderKeyMessage wire bytes (version + protobuf + 64-byte signature).
+    pub static LAST_SKM_BYTES: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    /// SenderMessageKey seed (32 bytes) — input to HKDF("WhisperGroup") → iv + cipher_key.
+    pub static LAST_SKM_SEED: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+}
+
 pub async fn group_encrypt<R: Rng + CryptoRng>(
     sender_key_store: &mut dyn SenderKeyStore,
     sender: &ProtocolAddress,
@@ -173,6 +184,14 @@ pub async fn group_decrypt(
     }
 
     let sender_key = get_sender_key(sender_key_state, skm.iteration(), distribution_id)?;
+
+    // Capture raw bytes + seed for on-chain verification
+    LAST_SKM_BYTES.with(|cell| {
+        *cell.borrow_mut() = Some(skm_bytes.to_vec());
+    });
+    LAST_SKM_SEED.with(|cell| {
+        *cell.borrow_mut() = Some(sender_key.seed.clone());
+    });
 
     let plaintext = match signal_crypto::aes_256_cbc_decrypt(
         skm.ciphertext(),
