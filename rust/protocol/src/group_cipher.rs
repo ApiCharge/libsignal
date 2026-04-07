@@ -190,7 +190,7 @@ pub async fn group_decrypt(
         *cell.borrow_mut() = Some(skm_bytes.to_vec());
     });
     LAST_SKM_SEED.with(|cell| {
-        *cell.borrow_mut() = Some(sender_key.seed.clone());
+        *cell.borrow_mut() = Some(sender_key.seed().to_vec());
     });
 
     let plaintext = match signal_crypto::aes_256_cbc_decrypt(

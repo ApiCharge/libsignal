@@ -62,6 +62,10 @@ impl SenderMessageKey {
         &self.cipher_key
     }
 
+    pub(crate) fn seed(&self) -> &[u8] {
+        &self.seed
+    }
+
     pub(crate) fn as_protobuf(
         &self,
     ) -> storage_proto::sender_key_state_structure::SenderMessageKey {
