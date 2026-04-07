@@ -192,6 +192,7 @@ pub async fn group_decrypt(
     LAST_SKM_SEED.with(|cell| {
         *cell.borrow_mut() = Some(sender_key.seed().to_vec());
     });
+    log::info!("[DIAG] group_decrypt: set SKM bytes={} seed={}", skm_bytes.len(), sender_key.seed().len());
 
     let plaintext = match signal_crypto::aes_256_cbc_decrypt(
         skm.ciphertext(),
