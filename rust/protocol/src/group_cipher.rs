@@ -31,6 +31,9 @@ thread_local! {
     pub static LAST_SKM_BYTES: RefCell<Option<Vec<u8>>> = RefCell::new(None);
     /// SenderMessageKey seed (32 bytes) — input to HKDF("WhisperGroup") → iv + cipher_key.
     pub static LAST_SKM_SEED: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    /// Signing key (32 bytes, no 0x05 prefix) used to verify the most recent SenderKeyMessage.
+    /// Consumed by the caller to detect signing key rotation vs on-chain state.
+    pub static LAST_SKM_SIGNING_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
 }
 
 pub async fn group_encrypt<R: Rng + CryptoRng>(
@@ -191,6 +194,17 @@ pub async fn group_decrypt(
     });
     LAST_SKM_SEED.with(|cell| {
         *cell.borrow_mut() = Some(sender_key.seed().to_vec());
+    });
+    // Capture the signing key used for verification — may differ from the last SKDM
+    // if the sender rotated after a membership change.
+    LAST_SKM_SIGNING_KEY.with(|cell| {
+        let key_bytes = signing_key.serialize();
+        let key_no_prefix = if key_bytes.len() == 33 && key_bytes[0] == 0x05 {
+            key_bytes[1..].to_vec()
+        } else {
+            key_bytes.to_vec()
+        };
+        *cell.borrow_mut() = Some(key_no_prefix);
     });
     log::debug!("[DIAG] group_decrypt: set SKM bytes={} seed={}", skm_bytes.len(), sender_key.seed().len());
 
