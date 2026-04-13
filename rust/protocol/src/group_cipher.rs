@@ -20,6 +20,9 @@ use crate::{
 /// 32 bytes: Curve25519 public key (no 0x05 prefix).
 thread_local! {
     pub static LAST_SKDM_SIGNING_KEY: RefCell<Option<Vec<u8>>> = RefCell::new(None);
+    /// Distribution ID (UUID) from the most recent SKDM processing.
+    /// Used by the daemon to resolve which group an SKDM belongs to.
+    pub static LAST_SKDM_DISTRIBUTION_ID: RefCell<Option<uuid::Uuid>> = RefCell::new(None);
 }
 
 /// Thread-locals that capture the raw SenderKeyMessage bytes and the
@@ -279,6 +282,9 @@ pub async fn process_sender_key_distribution_message(
     };
     LAST_SKDM_SIGNING_KEY.with(|cell| {
         *cell.borrow_mut() = Some(key_no_prefix);
+    });
+    LAST_SKDM_DISTRIBUTION_ID.with(|cell| {
+        *cell.borrow_mut() = Some(distribution_id);
     });
 
     Ok(())
